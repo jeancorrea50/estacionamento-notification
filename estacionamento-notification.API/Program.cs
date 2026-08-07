@@ -12,6 +12,8 @@ using Microsoft.IdentityModel.Tokens;
 var builder = WebApplication.CreateBuilder(args);
 const string CorsPolicy = "NotificationCors";
 
+var pathBase = builder.Configuration["PathBase"];
+
 builder.Services.AddControllers();
 builder.Services.AddCors(options =>
 {
@@ -57,8 +59,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 var accessToken = context.Request.Query["access_token"];
                 var path = context.HttpContext.Request.Path;
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                if (!string.IsNullOrEmpty(accessToken)
+                    && (path.StartsWithSegments("/hubs")
+                        || path.StartsWithSegments($"{pathBase}/hubs")))
+                {
                     context.Token = accessToken;
+                }
+
                 return Task.CompletedTask;
             }
         };
@@ -67,6 +74,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+if (!string.IsNullOrWhiteSpace(pathBase))
+    app.UsePathBase(pathBase);
 
 app.UseCors(CorsPolicy);
 if (!app.Environment.IsDevelopment())

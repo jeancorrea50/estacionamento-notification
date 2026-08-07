@@ -1,0 +1,25 @@
+services:
+  estacnotification-api:
+    container_name: estacnotification_api
+    image: estacionamento-notification
+    build:
+      context: .
+      dockerfile: estacionamento-notification.API/Dockerfile
+    ports:
+      - "8083:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - PathBase=/estacnotification
+      - ConnectionStrings__CentralConnection=Server=db;Database=GtCentral;User=sa;Password=@Admin2134;TrustServerCertificate=True;
+      - Notification__InternalKey=estac-notification-internal-dev-key
+      - BearerTokenSettings__Secret=08A977FGS0DF87GS0DF6GS0DFG7SDF6G7SDF60GS0D8FG6S78DF0G67S0DF6GS7DFG
+      - BearerTokenSettings__Issuer=estac.backend
+      - BearerTokenSettings__ValidOn=http://localhost
+    networks:
+      - estac-network
+    restart: unless-stopped
+
+networks:
+  estac-network:
+    external: true

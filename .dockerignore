@@ -1,0 +1,14 @@
+**/.git
+**/.vs
+**/.idea
+**/bin
+**/obj
+**/.dockerignore
+**/Dockerfile*
+**/docker-compose*
+**/*.md
+**/*.user
+**/*.http
+**/Properties/launchSettings.json
+**/*.sln
+**/*.slnx
