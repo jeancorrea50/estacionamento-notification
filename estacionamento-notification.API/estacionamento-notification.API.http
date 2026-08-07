@@ -1,0 +1,6 @@
+@estacionamento_notification.API_HostAddress = http://localhost:5194
+
+GET {{estacionamento_notification.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
