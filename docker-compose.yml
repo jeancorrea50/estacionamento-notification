@@ -13,6 +13,8 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORT=
       - PathBase=/estac/notification
       - ConnectionStrings__CentralConnection=Server=db;Database=GtCentral;User=sa;Password=@Admin2134;TrustServerCertificate=True;
       - Notification__InternalKey=estac-notification-internal-dev-key

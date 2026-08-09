@@ -17,8 +17,10 @@ FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 EXPOSE 8080
 
+# Não usar "Urls" em appsettings.json — sobrescreve e quebra o mapeamento 8083→8080.
 ENV ASPNETCORE_URLS=http://+:8080
+ENV ASPNETCORE_HTTP_PORTS=8080
 ENV PathBase=/estac/notification
 
 COPY --from=build /app/publish .
-ENTRYPOINT ["dotnet", "estacionamento-notification.API.dll"]
+ENTRYPOINT ["dotnet", "estacionamento-notification.API.dll", "--urls", "http://+:8080"]

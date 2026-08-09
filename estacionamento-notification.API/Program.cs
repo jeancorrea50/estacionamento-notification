@@ -14,7 +14,10 @@ using Microsoft.OpenApi.Models;
 var builder = WebApplication.CreateBuilder(args);
 const string CorsPolicy = "NotificationCors";
 
-var pathBase = builder.Configuration["PathBase"];
+var pathBase = builder.Configuration["PathBase"]?.Trim();
+if (!string.IsNullOrWhiteSpace(pathBase) && !pathBase.StartsWith('/'))
+    pathBase = "/" + pathBase;
+pathBase = string.IsNullOrWhiteSpace(pathBase) ? null : pathBase.TrimEnd('/');
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -139,14 +142,11 @@ builder.Services.AddAuthentication(options =>
         },
         OnMessageReceived = context =>
         {
+            // Após UsePathBase, Path já vem sem o prefixo (/hubs/...).
             var accessToken = context.Request.Query["access_token"];
             var path = context.HttpContext.Request.Path;
-            if (!string.IsNullOrEmpty(accessToken)
-                && (path.StartsWithSegments("/hubs")
-                    || path.StartsWithSegments($"{pathBase}/hubs")))
-            {
+            if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
                 context.Token = accessToken;
-            }
 
             return Task.CompletedTask;
         }
@@ -165,15 +165,13 @@ app.UseSwaggerUI(c =>
 {
     var swaggerJson = string.IsNullOrWhiteSpace(pathBase)
         ? "/swagger/v1/swagger.json"
-        : $"{pathBase.TrimEnd('/')}/swagger/v1/swagger.json";
+        : $"{pathBase}/swagger/v1/swagger.json";
     c.SwaggerEndpoint(swaggerJson, "Estacionamento Notification API v1");
     c.RoutePrefix = "swagger";
 });
 
 app.UseCors(CorsPolicy);
-if (!app.Environment.IsDevelopment())
-    app.UseHttpsRedirection();
-
+// HTTP atrás de porta publicada / gateway — não redirecionar para HTTPS.
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
