@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using EstacionamentoNotification.API.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
@@ -11,20 +11,11 @@ public sealed class NotificacaoHub : Hub
 
     public override async Task OnConnectedAsync()
     {
-        var userId = Context.User?.FindFirstValue("unique_name")
-            ?? Context.User?.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? Context.User?.FindFirstValue("sub");
+        var userId = Context.User.ResolveUsuarioId();
+        if (userId > 0)
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"user:{userId}");
 
-        if (int.TryParse(userId, out var id) && id > 0)
-            await Groups.AddToGroupAsync(Context.ConnectionId, $"user:{id}");
-
-        var roles = Context.User?.FindAll("role")
-            .Concat(Context.User?.FindAll(ClaimTypes.Role) ?? Enumerable.Empty<Claim>())
-            .Select(c => c.Value)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            ?? Enumerable.Empty<string>();
-
-        if (roles.Any(r => string.Equals(r, "Admin", StringComparison.OrdinalIgnoreCase)))
+        if (Context.User.IsInRoleAdmin())
             await Groups.AddToGroupAsync(Context.ConnectionId, "role:Admin");
 
         await base.OnConnectedAsync();

@@ -1,4 +1,4 @@
-using System.Security.Claims;
+using EstacionamentoNotification.API.Auth;
 using EstacionamentoNotification.Application.Queries.ListarNotificacoes;
 using EstacionamentoNotification.Domain.Interfaces;
 using MediatR;
@@ -26,7 +26,7 @@ public sealed class NotificacoesController : ControllerBase
         [FromQuery] int take = 50,
         CancellationToken cancellationToken = default)
     {
-        var usuarioId = ResolveUsuarioId();
+        var usuarioId = User.ResolveUsuarioId();
         if (usuarioId <= 0)
             return Unauthorized();
 
@@ -42,20 +42,11 @@ public sealed class NotificacoesController : ControllerBase
     [HttpPost("{id:long}/lida")]
     public async Task<ActionResult> MarcarLida(long id, CancellationToken cancellationToken)
     {
-        var usuarioId = ResolveUsuarioId();
+        var usuarioId = User.ResolveUsuarioId();
         if (usuarioId <= 0)
             return Unauthorized();
 
         await _repository.MarkReadAsync(id, usuarioId, cancellationToken);
         return Ok(new { sucesso = true });
-    }
-
-    private int ResolveUsuarioId()
-    {
-        var raw = User.FindFirstValue(ClaimTypes.NameIdentifier)
-            ?? User.FindFirstValue("unique_name")
-            ?? User.FindFirstValue("sub");
-
-        return int.TryParse(raw, out var id) ? id : 0;
     }
 }
