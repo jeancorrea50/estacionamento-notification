@@ -79,7 +79,11 @@ public sealed class CriarNotificacaoCommandHandler
             CodExportacao = request.CodExportacao
         };
 
-        await _publisher.PublishAsync(payload, usuarioIds, cancellationToken);
+        await _publisher.PublishAsync(
+            payload,
+            usuarioIds,
+            cancellationToken,
+            notificarRoleAdmin: request.NotificarRoleAdmin);
 
         return new CriarNotificacaoResult
         {

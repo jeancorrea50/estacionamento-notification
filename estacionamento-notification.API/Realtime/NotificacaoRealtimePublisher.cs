@@ -19,9 +19,11 @@ public sealed class NotificacaoRealtimePublisher : INotificacaoRealtimePublisher
     public async Task PublishAsync(
         object payload,
         IEnumerable<int> usuarioIds,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool notificarRoleAdmin = true)
     {
-        await _hub.Clients.Group(AdminGroup).SendAsync(EventName, payload, cancellationToken);
+        if (notificarRoleAdmin)
+            await _hub.Clients.Group(AdminGroup).SendAsync(EventName, payload, cancellationToken);
 
         foreach (var usuarioId in usuarioIds.Distinct())
         {
