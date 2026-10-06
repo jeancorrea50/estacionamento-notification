@@ -31,10 +31,12 @@ internal static class ClaimsPrincipalExtensions
     public static bool IsInRoleAdmin(this ClaimsPrincipal? user)
     {
         if (user is null) return false;
-        if (user.IsInRole("Admin")) return true;
+        if (user.IsInRole("Admin") || user.IsInRole("Administrador")) return true;
 
         return user.FindAll(JwtClaimTypes.Role)
             .Concat(user.FindAll(ClaimTypes.Role))
-            .Any(c => string.Equals(c.Value, "Admin", StringComparison.OrdinalIgnoreCase));
+            .Any(c =>
+                string.Equals(c.Value, "Admin", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(c.Value, "Administrador", StringComparison.OrdinalIgnoreCase));
     }
 }

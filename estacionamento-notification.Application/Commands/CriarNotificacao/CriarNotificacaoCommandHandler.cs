@@ -10,6 +10,13 @@ public sealed class CriarNotificacaoCommandHandler
 {
     public const string AdminRoleName = "Admin";
 
+    /// <summary>Tipos operacionais de infraestrutura — somente perfil Admin.</summary>
+    private static readonly HashSet<string> TiposSomenteAdmin = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "GtsMigracao",
+        "ExcluirBanco"
+    };
+
     private readonly INotificacaoRepository _repository;
     private readonly INotificacaoRealtimePublisher _publisher;
 
@@ -32,18 +39,39 @@ public sealed class CriarNotificacaoCommandHandler
         if (string.IsNullOrWhiteSpace(request.Mensagem))
             throw new ArgumentException("Mensagem é obrigatória.");
 
-        var usuarioIds = new HashSet<int>(request.UsuarioIds ?? Enumerable.Empty<int>());
+        var tipo = request.Tipo.Trim();
+        var somenteAdmin = TiposSomenteAdmin.Contains(tipo) || request.NotificarRoleAdmin;
 
-        if (request.NotificarRoleAdmin)
+        var adminIds = await _repository.ListUsuarioIdsByRoleAsync(AdminRoleName, cancellationToken);
+        var adminSet = new HashSet<int>(adminIds);
+
+        var usuarioIds = new HashSet<int>();
+
+        if (somenteAdmin)
         {
-            var admins = await _repository.ListUsuarioIdsByRoleAsync(AdminRoleName, cancellationToken);
-            foreach (var id in admins)
+            // Migration / exclusão de banco (e qualquer NotificarRoleAdmin):
+            // destina APENAS usuários com role Admin — ignora UsuarioIds extras.
+            foreach (var id in adminSet)
                 usuarioIds.Add(id);
+        }
+        else
+        {
+            foreach (var id in request.UsuarioIds ?? Enumerable.Empty<int>())
+            {
+                if (id > 0)
+                    usuarioIds.Add(id);
+            }
+        }
+
+        if (usuarioIds.Count == 0 && somenteAdmin)
+        {
+            // Sem Admin no Identity: não cria notificação “órfã” nem faz broadcast amplo.
+            return new CriarNotificacaoResult { Id = 0, SignalREnviado = false };
         }
 
         var entity = new Notificacao
         {
-            Tipo = request.Tipo.Trim(),
+            Tipo = tipo,
             Titulo = request.Titulo.Trim(),
             Mensagem = request.Mensagem.Trim(),
             DadosJson = request.DadosJson,
@@ -56,7 +84,8 @@ public sealed class CriarNotificacaoCommandHandler
             }).ToList()
         };
 
-        if (!string.IsNullOrWhiteSpace(request.CodExportacao))
+        // Escopo por pátio não se aplica a notificações só-Admin (evita vazamento por CodExportacao).
+        if (!somenteAdmin && !string.IsNullOrWhiteSpace(request.CodExportacao))
         {
             entity.Estacionamentos.Add(new NotificacaoEstacionamento
             {
@@ -76,14 +105,14 @@ public sealed class CriarNotificacaoCommandHandler
             saved.ReferenciaTipo,
             saved.ReferenciaId,
             saved.DataCriacao,
-            CodExportacao = request.CodExportacao
+            CodExportacao = somenteAdmin ? null : request.CodExportacao
         };
 
         await _publisher.PublishAsync(
             payload,
             usuarioIds,
             cancellationToken,
-            notificarRoleAdmin: request.NotificarRoleAdmin);
+            notificarRoleAdmin: somenteAdmin);
 
         return new CriarNotificacaoResult
         {

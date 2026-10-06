@@ -124,14 +124,28 @@ public sealed class NotificacaoRepository : INotificacaoRepository
         string roleName,
         CancellationToken cancellationToken = default)
     {
-        var role = await _db.Set<IdentityRoleRow>().AsNoTracking()
-            .FirstOrDefaultAsync(r => r.Name == roleName, cancellationToken);
+        if (string.IsNullOrWhiteSpace(roleName))
+            return Array.Empty<int>();
 
-        if (role is null)
+        var nome = roleName.Trim();
+        // Aceita Admin / Administrador (case-insensitive).
+        var aliases = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { nome };
+        if (aliases.Contains("Admin") || aliases.Contains("Administrador"))
+        {
+            aliases.Add("Admin");
+            aliases.Add("Administrador");
+        }
+
+        var roleIds = await _db.Set<IdentityRoleRow>().AsNoTracking()
+            .Where(r => r.Name != null && aliases.Contains(r.Name))
+            .Select(r => r.Id)
+            .ToListAsync(cancellationToken);
+
+        if (roleIds.Count == 0)
             return Array.Empty<int>();
 
         return await _db.Set<IdentityUserRoleRow>().AsNoTracking()
-            .Where(ur => ur.RoleId == role.Id)
+            .Where(ur => roleIds.Contains(ur.RoleId))
             .Select(ur => ur.UserId)
             .Distinct()
             .ToListAsync(cancellationToken);
